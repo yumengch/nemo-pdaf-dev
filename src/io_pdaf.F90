@@ -359,6 +359,94 @@ contains
          enddo
       end if
    END SUBROUTINE read_restart
+   !> Read model output file to form state vector
+   !!
+   SUBROUTINE read_model_output(path_root, model_ens_prefix, path_suffix, &
+      ens_member, vname, timestep, sel_lvl, op, offset, state_p)
+      USE netcdf
+      use mod_memcount_pdaf, only: memcount
+      use nemo_pdaf, only: i0, j0, ni_p, nj_p, nk_p
+      use parallel_pdaf, only: mype_filter
+      use statevector_pdaf, only: sfields, n_fields
+      use transforms_pdaf, only: field2state
+      IMPLICIT NONE
+      !*** Arguments ***
+      character(len=*), intent(in) :: path_root !< Root path to model output files
+      character(len=*), intent(in) :: model_ens_prefix !< Prefix for model ensemble files
+      character(len=*), intent(in) :: path_suffix !< Suffix for model output files
+      character(len=*), intent(in) :: vname !< Name of the variable to read
+      integer,   intent(in)    :: ens_member !< Ensemble member index
+      integer,   intent(in)    :: timestep !< Time step of the model output file
+      integer,   intent(in)    :: sel_lvl !< Index of the selected levels/ice category (for 'select_lvl' operation)
+      integer,   intent(in)    :: offset !< Offset for the state vector
+      character(len=*), intent(in) :: op !< Operation to perform on the variable
+                                     !< Possible operations: 'sum_over_lvls', 'select_lvl', 'none'
+                                     !< selected level/ice category can be specified in sel_lvl
+                                     !< 'sum_over_lvls' sums over all levels/ice categories
+                                     !< other,'none' or empty string, 3D field will be returned
+                                     !< for sea ice variables it has to choose between 'sum_over_lvls'
+                                     !< and 'select_lvl' to avoid issues in field2state
+      real(pwp), intent(inout) :: state_p(:) !< State vector for vname
+      ! Local variables
+      character(len=lc) :: fname ! file name
+      INTEGER :: ncid              ! netCDF file identifier
+      INTEGER :: varid             ! variable identifier
+      integer :: k                 ! counter
+      integer :: nk                ! number of levels for given variable
+      integer :: start_k           ! starting level for reading variable (for handling sea ice categories)
+      integer :: ndims             ! number of dimensions of variable in model output file
+      integer :: dimids(4)           ! dimension IDs for the variable
+      integer :: ndims_sv          ! number of dimensions of the state vector
+      ! Construct model output file path
+      write(fname, '(a,i0,"/",a)') TRIM(path_root)//'/'//TRIM(model_ens_prefix), &
+                                   ens_member,'/'//TRIM(path_suffix)
+
+      if (verbose_io>0 .and. mype_filter==0) &
+            write(*,'(a,4x,a)') 'NEMO-PDAF','*** Ensemble: Reading model output file'
+
+      if (.not. allocated(tmp_4d)) allocate(tmp_4d(ni_p, nj_p, nk_p, 1))
+
+      ! Initialize state
+      ndims_sv = 3
+      if (verbose_io>1) then
+         write(*,'(a,2x,a)') 'NEMO-PDAF', 'Reading: '//fname
+         write (*,'(a,1x,a,a)') 'NEMO-PDAF', 'Variable: ',vname
+      end if
+      ! Open the file
+      call check( nf90_open(trim(fname), nf90_nowrite, ncid) )
+      !  Read field
+      call check( nf90_inq_varid(ncid, trim(vname), varid) )
+      call check( nf90_inquire_variable(ncid, varid, ndims=ndims, dimids=dimids) )
+      if (ndims == 4) then
+         call check(nf90_inquire_dimension(ncid, dimids(3), len=nk))
+         start_k = 1
+         ndims_sv = 3
+         ! specific operation for selecting a level/category
+         if (trim(op) == 'select_lvl') then
+               nk = 1
+               start_k = sel_lvl
+               ndims_sv = 2
+         end if
+         call check( nf90_get_var(ncid, varid, tmp_4d(:, :, :nk, 1), &
+               start=[i0, j0, start_k, timestep], count=[ni_p, nj_p, nk, 1]) )
+         ! operations to form state vector
+         if (trim(op) == 'sum_over_lvls') then
+            ndims_sv = 2
+            do k = 2, nk
+               tmp_4d(:,:,1,1) = tmp_4d(:,:,1,1) + tmp_4d(:,:,k,1)
+            end do
+         end if
+      else
+         ndims_sv = 2
+         call check( nf90_get_var(ncid, varid, tmp_4d(:,:,1,1), &
+               start=[i0, j0, timestep], count=[ni_p, nj_p, 1]) )
+      end if
+
+      ! Close the file
+      call check( nf90_close(ncid) )
+      ! Convert field to state vector
+      call field2state(tmp_4d, state_p, offset, ndims_sv)
+   END SUBROUTINE read_model_output
    !===========================================================================
    !> Write NEMO ASM increment compatible for IAU
    !!

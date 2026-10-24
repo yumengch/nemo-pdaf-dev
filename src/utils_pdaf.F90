@@ -115,6 +115,7 @@ contains
       use obs_sit_mgrid_pdafomi, only: mgrid_sit_nml
       use obs_fbd_mgrid_pdafomi, only: mgrid_fbd_nml
       use obs_snow_mgrid_pdafomi, only: mgrid_snow_nml
+      use obs_sic, only: obs_sic_nml
       use statevector_pdaf, only: sv_nml
       ! ****************************************************
       ! ***   Initialize PDAF parameters from namelist   ***
@@ -134,6 +135,8 @@ contains
       read(20, NML=mgrid_fbd_nml)
       rewind (20)
       read(20, NML=mgrid_snow_nml)
+      rewind (20)
+      read(20, NML=obs_sic_nml)
       close (20)
 
 
@@ -147,6 +150,7 @@ contains
       use obs_sit_mgrid_pdafomi, only: print_sit_mgrid_configuration
       use obs_fbd_mgrid_pdafomi, only: print_fbd_mgrid_configuration
       use obs_snow_mgrid_pdafomi, only: print_snow_mgrid_configuration
+      use obs_sic, only: print_sic_configuration
       ! Print PDAF parameters to screen
       showconf: if (mype_ens == 0) then
          write (*, '(/a,1x,a)') 'NEMO-PDAF','-- Overview of PDAF configuration --'
@@ -156,6 +160,7 @@ contains
          call print_sit_mgrid_configuration()
          call print_fbd_mgrid_configuration()
          call print_snow_mgrid_configuration()
+         call print_sic_configuration()
          write (*, '(a,1x,a/)') 'NEMO-PDAF','-- End of PDAF configuration overview --'
       end if showconf
    end subroutine print_config

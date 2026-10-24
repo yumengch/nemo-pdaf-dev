@@ -119,7 +119,7 @@ contains
       integer :: i                             !> Counters
       integer :: dim_obs_p                     !> Number of process-local observations
       integer :: ncid, id_var
-      integer :: pos(3), cnt(3)         
+      integer :: pos(3), cnt(3)
       real(pwp), allocatable :: obs_p(:)       !> PE-local observation vector
 
       real(pwp), allocatable :: ivar_obs_p(:)  !> PE-local inverse observation error variance
@@ -134,7 +134,7 @@ contains
       logical :: maytosept = .true.
       real(pwp) :: obs_threshold = 0.0   ! default catches fill values
       integer   :: count
-      
+
 
       maytosept = .true. !#PUT THIS IN THE NAMELIST CONFIG; set there from runscript
 
@@ -155,7 +155,7 @@ contains
       thisobs%use_global_obs = use_global_obs
       ! Omit large innovation to omit nwet = 0 points
       thisobs%inno_omit = 3!1e6    ! nwet= 0 points will have obs = 0? but no corresponding model state(?)
-      
+
       ! **********************************
       ! *** Read observations from file ***
       ! **********************************
@@ -170,7 +170,7 @@ contains
       call check( nf90_open(trim(file_ssh_mgrid), NF90_NOWRITE, ncid) )
       call check( nf90_inq_varid(ncid, trim(varname_ssh_mgrid), id_var) )
       call check( nf90_inq_varid(ncid, trim(varname_ssh_mgrid), id_var) )
-      
+
       call check( nf90_inquire_variable(ncid, id_var, name=varname, xtype=xtype, &
                                  ndims=ndims, dimids=dimids, natts=natts) )
 
@@ -207,7 +207,7 @@ contains
 
       !has_nan = any(ieee_is_nan(obs_global))
       !write(*,*) minval(obs_global), maxval(obs_global),has_nan,shape(obs_global)
-      
+
 
 
       ! ***********************************************************
@@ -306,7 +306,7 @@ contains
       ! ****************************************************************
       ! Set inverse observation error variances
       if (maytosept) then
-      ivar_obs_p = 1.0e-12 
+      ivar_obs_p = 1.0e-12
       do i=1,size(obs_p)
         if ((obs_p(i)) < 0.) then
                 obs_p(i) = 0.0   !set to zero but distinct from real zero obs becasue large obs error
@@ -323,7 +323,7 @@ contains
         endif
       enddo
       else
-        ! if oct - apr inc  
+        ! if oct - apr inc
       ivar_obs_p = 1.0e-12
       do i=1,size(obs_p)
         if ((obs_p(i)) < 0.) then
@@ -341,7 +341,7 @@ contains
       endif
 
       !ivar_obs_p(:) = 1.0/(rms*rms)
-      
+
 
       ! ****************************************
       ! *** Gather global observation arrays ***
@@ -387,15 +387,15 @@ contains
       ! ******************************************************
       !Just need to pick out the grid cells and then sum over cats
       if (thisobs%doassim == 1) then
-      
+
       size_osp = dim_p/n_fields
       if (size_osp <1) size_osp = 1 !for when dim_p = 1
-       
+
       allocate(ostate_p(size_osp))
       ostate_p = 0.
       !if (thisobs%doassim == 1) then
-   
-      if (dim_p > 1) then 
+
+      if (dim_p > 1) then
           do i = 1, n_fields
           !write(*,*) 'field', i, 'name:', trim(sfields(i)%name_rest_n)
           !write(*,*) 'i, off, dim:', i, sfields(i)%off, sfields(i)%dim, &
@@ -403,7 +403,7 @@ contains
            if (sfields(i)%name_rest_n == 'a_i') then
               !write(*,*) 'matched a_i, sum:', sum(state_p(sfields(i)%off+1 : sfields(i)%off + sfields(i)%dim))
               !ostate_p(:) = ostate_p(:) + state_p(sfields(i)%off:sfields(i)%off + sfields(i)%dim)
-              ostate_p(1:sfields(i)%dim) = ostate_p(1:sfields(i)%dim) + & 
+              ostate_p(1:sfields(i)%dim) = ostate_p(1:sfields(i)%dim) + &
                   state_p(sfields(i)%off+1 : sfields(i)%off + sfields(i)%dim)
               !write(*,*) i,state_p(sfields(i)%off:sfields(i)%off + sfields(i)%dim)
           endif
@@ -439,8 +439,8 @@ contains
 
 
 
-     
-    
+
+
 
      deallocate(ostate_p)
      end if

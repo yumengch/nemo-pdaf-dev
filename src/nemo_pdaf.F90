@@ -30,7 +30,7 @@ module nemo_pdaf
    real(4), allocatable   :: nav_lon(:,:), nav_lat(:,:)   ! Restart file grid
    real(pwp), allocatable :: tmask(:,:,:)     ! Temperature mask array
    ! wet points for state vectors
-   integer :: use_wet_state=0               ! 1: State vector contains full columns where surface grid point is wet
+   integer :: use_wet_state=2               ! 1: State vector contains full columns where surface grid point is wet
                                             ! 2: State vector only contains wet grid points
                                             ! other: State vector contains 2d/3d grid box
    integer :: nwet                          ! Number of surface wet grid points
